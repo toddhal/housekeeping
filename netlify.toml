@@ -1,0 +1,13 @@
+[build]
+  command = "vite build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+
+# SPA fallback: any unknown route returns index.html so React Router can handle it.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
