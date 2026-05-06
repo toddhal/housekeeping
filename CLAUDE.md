@@ -8,8 +8,8 @@ A mobile-first React/Vite web app used by a teenage house cleaner to follow a cl
 - **Styling**: Tailwind CSS
 - **Routing**: React Router v6
 - **State**: React useState / useReducer + localStorage for persistence
-- **Notifications**: Twilio SMS API (via Netlify serverless function)
-- **Music**: Apple MusicKit JS
+- **Notifications**: Stubbed (Twilio SMS to be wired up later)
+- **Music**: Spotify iFrame Embed (no token required)
 - **Payment**: Cash App deep link / cashtag URL
 - **Deployment**: Netlify (with Netlify Functions for serverless backend)
 
@@ -78,11 +78,6 @@ Store these in `.env` locally and in Netlify dashboard for production:
 VITE_ADMIN_PASSWORD=your_admin_password
 VITE_CASHAPP_CASHTAG=$yourcashtag
 VITE_CASHAPP_AMOUNT=amount_in_dollars
-VITE_ADMIN_PHONE=+1xxxxxxxxxx
-VITE_TWILIO_ACCOUNT_SID=your_twilio_sid
-VITE_TWILIO_AUTH_TOKEN=your_twilio_auth_token
-VITE_TWILIO_FROM_NUMBER=+1xxxxxxxxxx
-VITE_APPLE_MUSIC_DEVELOPER_TOKEN=your_musickit_token
 ```
 
 ## Key Behaviors
