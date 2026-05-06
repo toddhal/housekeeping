@@ -1,10 +1,11 @@
 import { Routes, Route } from 'react-router-dom'
+import CleanerView from './pages/CleanerView.jsx'
 
-// Placeholder App — full routes wired up in Task 11.
+// Full routing wired up in Task 11.
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={<div className="p-6 font-display">Hello, House Cleaning!</div>} />
+      <Route path="/" element={<CleanerView />} />
     </Routes>
   )
 }
