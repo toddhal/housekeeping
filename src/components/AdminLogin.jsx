@@ -3,22 +3,37 @@ import { useState } from 'react'
 export default function AdminLogin({ onSuccess }) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    const expected = import.meta.env.VITE_ADMIN_PASSWORD
-    // If no password is configured, accept anything in dev so the homeowner can still get in.
-    // The real password should be set via env var in production.
-    if (!expected || password === expected) {
+    setSubmitting(true)
+    try {
+      const res = await fetch('/.netlify/functions/verifyAdmin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      })
+      if (!res.ok) {
+        setError('Incorrect password')
+        setPassword('')
+        return
+      }
+      const data = await res.json()
+      if (!data.token) {
+        setError('Login failed')
+        return
+      }
       try {
-        sessionStorage.setItem('isAdminAuth', '1')
+        sessionStorage.setItem('adminToken', data.token)
       } catch {
         /* ignore */
       }
       onSuccess?.()
-    } else {
-      setError('Incorrect password')
-      setPassword('')
+    } catch {
+      setError('Network error — please try again')
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -43,9 +58,10 @@ export default function AdminLogin({ onSuccess }) {
       {error ? <p className="text-sm text-deep-pink">{error}</p> : null}
       <button
         type="submit"
-        className="w-full bg-gradient-to-r from-pink to-teal text-white font-display text-lg py-3 rounded-xl active:scale-[0.99] transition"
+        disabled={submitting}
+        className="w-full bg-gradient-to-r from-pink to-teal text-white font-display text-lg py-3 rounded-xl active:scale-[0.99] transition disabled:opacity-60"
       >
-        Log In
+        {submitting ? 'Checking…' : 'Log In'}
       </button>
     </form>
   )

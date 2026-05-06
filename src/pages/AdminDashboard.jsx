@@ -4,7 +4,7 @@ import AdminLogin from '../components/AdminLogin.jsx'
 
 function isAuthed() {
   try {
-    return sessionStorage.getItem('isAdminAuth') === '1'
+    return !!sessionStorage.getItem('adminToken')
   } catch {
     return false
   }
@@ -16,7 +16,7 @@ export default function AdminDashboard() {
 
   const handleLogout = () => {
     try {
-      sessionStorage.removeItem('isAdminAuth')
+      sessionStorage.removeItem('adminToken')
     } catch {
       /* ignore */
     }

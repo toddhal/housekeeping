@@ -25,6 +25,25 @@ function setFired(key, value) {
   }
 }
 
+function sendSms(message) {
+  const to = import.meta.env.VITE_ADMIN_PHONE
+  if (!to) return
+  try {
+    fetch('/.netlify/functions/sendSms', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-app-secret': import.meta.env.VITE_APP_SECRET,
+      },
+      body: JSON.stringify({ to, message }),
+    }).catch(() => {
+      /* swallow network errors — SMS is best-effort */
+    })
+  } catch {
+    /* ignore */
+  }
+}
+
 export function notifyStart() {
   if (isFired(START_FIRED)) return
   const now = new Date().toISOString()
@@ -34,7 +53,7 @@ export function notifyStart() {
   setFired(START_FIRED, true)
   // eslint-disable-next-line no-console
   console.log('[notifyStart] Cleaning has started!', now)
-  // TODO: wire up SMS (Twilio) here — POST { to, message } to /.netlify/functions/sendSms
+  sendSms('🧹 Cleaning has started!')
 }
 
 export function notifyDone({ totalItems = 0, completedItems = 0 } = {}) {
@@ -68,7 +87,7 @@ export function notifyDone({ totalItems = 0, completedItems = 0 } = {}) {
 
   // eslint-disable-next-line no-console
   console.log('[notifyDone] Cleaning is complete!', now)
-  // TODO: wire up SMS (Twilio) here — POST { to, message } to /.netlify/functions/sendSms
+  sendSms('✅ Cleaning is complete! Payment request sent.')
 }
 
 // Called by the hook's resetChecklist so a fresh session can fire again.

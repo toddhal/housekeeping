@@ -5,7 +5,7 @@ const HISTORY_KEY = 'checklist:history'
 
 function isAuthed() {
   try {
-    return sessionStorage.getItem('isAdminAuth') === '1'
+    return !!sessionStorage.getItem('adminToken')
   } catch {
     return false
   }

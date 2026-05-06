@@ -33,7 +33,7 @@ function loadChecked() {
 
 function flattenItems(sections) {
   const items = []
-  for (const section of sections) {
+  for (const section of sections.filter(s => !s.optional)) {
     for (const sub of section.subSections || []) {
       for (const item of sub.items || []) items.push(item)
     }

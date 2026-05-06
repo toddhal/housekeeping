@@ -39,7 +39,7 @@ function uniqueId(prefix) {
 
 function isAuthed() {
   try {
-    return sessionStorage.getItem('isAdminAuth') === '1'
+    return !!sessionStorage.getItem('adminToken')
   } catch {
     return false
   }
