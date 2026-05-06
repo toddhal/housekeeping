@@ -1,5 +1,9 @@
 # CLAUDE.md — Cleaning Checklist App
 
+## github repo
+https://github.com/toddhal/housekeeping
+create branch
+
 ## Project Overview
 A mobile-first React/Vite web app used by a teenage house cleaner to follow a cleaning checklist, play music while she works, and request payment when done. The admin (homeowner) can edit tasks, view session history, and receive notifications when cleaning starts and finishes.
 
