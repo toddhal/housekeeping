@@ -15,13 +15,22 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import defaultTasks from '../data/defaultTasks.js'
+import houses from '../data/houses.js'
+import HouseSelector from '../components/HouseSelector.jsx'
 
-const TASKS_KEY = 'checklist:tasks'
+function tasksKey(houseId) {
+  return `tasks_${houseId}`
+}
 
-function loadTasks() {
+function defaultsFor(houseId) {
+  const house = houses.find((h) => h.id === houseId) || houses[0]
+  // Deep-clone so edits never mutate the imported data.
+  return JSON.parse(JSON.stringify(house.tasks))
+}
+
+function loadTasks(houseId) {
   try {
-    const raw = localStorage.getItem(TASKS_KEY)
+    const raw = localStorage.getItem(tasksKey(houseId))
     if (raw) {
       const parsed = JSON.parse(raw)
       if (Array.isArray(parsed) && parsed.length) return parsed
@@ -29,8 +38,7 @@ function loadTasks() {
   } catch {
     /* ignore */
   }
-  // Deep-clone defaults so edits never mutate the imported data.
-  return JSON.parse(JSON.stringify(defaultTasks))
+  return defaultsFor(houseId)
 }
 
 function uniqueId(prefix) {
@@ -78,9 +86,19 @@ function SortableSection({ section, children }) {
 
 export default function AdminTasks() {
   const navigate = useNavigate()
-  const [sections, setSections] = useState(loadTasks)
+  const [activeHouseId, setActiveHouseId] = useState(
+    () => localStorage.getItem('activeHouse') || 'home'
+  )
+  const [sections, setSections] = useState(() => loadTasks(activeHouseId))
   const [savedAt, setSavedAt] = useState(null)
   const dirtyRef = useRef(false)
+
+  // When the editor's house changes, reload that house's tasks.
+  useEffect(() => {
+    setSections(loadTasks(activeHouseId))
+    dirtyRef.current = false
+    setSavedAt(null)
+  }, [activeHouseId])
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -198,10 +216,11 @@ export default function AdminTasks() {
   }
 
   const handleSave = () => {
+    const key = tasksKey(activeHouseId)
     try {
-      localStorage.setItem(TASKS_KEY, JSON.stringify(sections))
+      localStorage.setItem(key, JSON.stringify(sections))
       // Trigger storage event in same tab so the cleaner view picks it up if open.
-      window.dispatchEvent(new StorageEvent('storage', { key: TASKS_KEY }))
+      window.dispatchEvent(new StorageEvent('storage', { key }))
     } catch {
       /* ignore */
     }
@@ -210,17 +229,30 @@ export default function AdminTasks() {
   }
 
   const handleResetDefaults = () => {
-    if (!confirm('Reset all tasks to the defaults? This cannot be undone.')) return
-    const fresh = JSON.parse(JSON.stringify(defaultTasks))
+    if (!confirm("Reset this house's tasks to the defaults? This cannot be undone.")) return
+    const fresh = defaultsFor(activeHouseId)
     setSections(fresh)
+    const key = tasksKey(activeHouseId)
     try {
-      localStorage.removeItem(TASKS_KEY)
-      window.dispatchEvent(new StorageEvent('storage', { key: TASKS_KEY }))
+      localStorage.removeItem(key)
+      window.dispatchEvent(new StorageEvent('storage', { key }))
     } catch {
       /* ignore */
     }
     dirtyRef.current = false
     setSavedAt(new Date())
+  }
+
+  const handleSwitchHouse = (id) => {
+    if (dirtyRef.current && !confirm('You have unsaved changes. Switch houses and lose them?')) {
+      return
+    }
+    setActiveHouseId(id)
+    try {
+      localStorage.setItem('activeHouse', id)
+    } catch {
+      /* ignore */
+    }
   }
 
   return (
@@ -241,6 +273,14 @@ export default function AdminTasks() {
           <span className="text-xs text-gray-400">Unsaved</span>
         )}
       </header>
+
+      <div className="mb-4">
+        <HouseSelector
+          houses={houses}
+          activeHouseId={activeHouseId}
+          onSwitch={handleSwitchHouse}
+        />
+      </div>
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={sectionIds} strategy={verticalListSortingStrategy}>

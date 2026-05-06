@@ -1,25 +1,31 @@
-// Stubbed notification helpers. Right now they just log + persist a timestamp
-// so the rest of the app can wire up start/done events. Twilio SMS will be
-// wired in later via the Netlify function in netlify/functions/sendSms.js.
+// Per-house notification helpers. State is scoped under house-specific
+// localStorage keys so each house has independent start/done events.
+//
+// History is a single shared list (`checklist:history`) — each entry includes
+// a `house` label so the admin can see which house each session belonged to.
 
-const START_KEY = 'checklist:startedAt'
-const DONE_KEY = 'checklist:doneAt'
-const START_FIRED = 'checklist:startFired'
-const DONE_FIRED = 'checklist:doneFired'
 const HISTORY_KEY = 'checklist:history'
 
-function isFired(key) {
+function notifyKey(houseId) {
+  return `notify_fired_${houseId}`
+}
+function sessionKey(houseId) {
+  return `session_${houseId}`
+}
+
+function readJson(key, fallback) {
   try {
-    return localStorage.getItem(key) === '1'
+    const raw = localStorage.getItem(key)
+    if (!raw) return fallback
+    return JSON.parse(raw)
   } catch {
-    return false
+    return fallback
   }
 }
 
-function setFired(key, value) {
+function writeJson(key, value) {
   try {
-    if (value) localStorage.setItem(key, '1')
-    else localStorage.removeItem(key)
+    localStorage.setItem(key, JSON.stringify(value))
   } catch {
     /* ignore */
   }
@@ -44,76 +50,70 @@ function sendSms(message) {
   }
 }
 
-export function notifyStart() {
-  if (isFired(START_FIRED)) return
+export function notifyStart(houseId, houseLabel = '') {
+  const fired = readJson(notifyKey(houseId), {})
+  if (fired.start) return
   const now = new Date().toISOString()
-  try {
-    localStorage.setItem(START_KEY, now)
-  } catch {}
-  setFired(START_FIRED, true)
+  const session = readJson(sessionKey(houseId), {}) || {}
+  session.startedAt = now
+  session.endedAt = null
+  writeJson(sessionKey(houseId), session)
+  writeJson(notifyKey(houseId), { ...fired, start: true })
   // eslint-disable-next-line no-console
-  console.log('[notifyStart] Cleaning has started!', now)
-  sendSms('🧹 Cleaning has started!')
+  console.log(`[notifyStart] ${houseLabel || houseId} cleaning has started!`, now)
+  sendSms(`🧹 ${houseLabel ? `${houseLabel}: ` : ''}Cleaning has started!`)
 }
 
-export function notifyDone({ totalItems = 0, completedItems = 0 } = {}) {
-  if (isFired(DONE_FIRED)) return
+export function notifyDone({ houseId, houseLabel = '', totalItems = 0, completedItems = 0 }) {
+  const fired = readJson(notifyKey(houseId), {})
+  if (fired.done) return
   const now = new Date().toISOString()
-  let startedAt = null
-  try {
-    startedAt = localStorage.getItem(START_KEY)
-    localStorage.setItem(DONE_KEY, now)
-  } catch {}
-  setFired(DONE_FIRED, true)
+  const session = readJson(sessionKey(houseId), {}) || {}
+  const startedAt = session.startedAt || now
+  session.endedAt = now
+  writeJson(sessionKey(houseId), session)
+  writeJson(notifyKey(houseId), { ...fired, done: true })
 
-  // Append session to history.
+  // Append to shared history with house label.
   try {
-    const start = startedAt ? new Date(startedAt) : new Date(now)
+    const start = new Date(startedAt)
     const end = new Date(now)
     const durationMs = Math.max(0, end.getTime() - start.getTime())
-    const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]')
+    const history = readJson(HISTORY_KEY, [])
     history.push({
       date: end.toISOString().slice(0, 10),
+      house: houseLabel || houseId,
       startTime: start.toISOString(),
       endTime: end.toISOString(),
       duration: durationMs,
       itemsCompleted: completedItems,
       totalItems,
     })
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(history))
+    writeJson(HISTORY_KEY, history)
   } catch {
     /* ignore */
   }
 
   // eslint-disable-next-line no-console
-  console.log('[notifyDone] Cleaning is complete!', now)
-  sendSms('✅ Cleaning is complete! Payment request sent.')
+  console.log(`[notifyDone] ${houseLabel || houseId} cleaning is complete!`, now)
+  sendSms(`✅ ${houseLabel ? `${houseLabel}: ` : ''}Cleaning is complete! Payment request sent.`)
 }
 
-// Called by the hook's resetChecklist so a fresh session can fire again.
-export function resetNotificationFlags() {
-  setFired(START_FIRED, false)
-  setFired(DONE_FIRED, false)
+export function resetNotificationFlags(houseId) {
   try {
-    localStorage.removeItem(START_KEY)
-    localStorage.removeItem(DONE_KEY)
+    localStorage.removeItem(notifyKey(houseId))
+    localStorage.removeItem(sessionKey(houseId))
   } catch {
     /* ignore */
   }
 }
 
-export function getStartedAt() {
-  try {
-    return localStorage.getItem(START_KEY)
-  } catch {
-    return null
-  }
+export function getStartedAt(houseId) {
+  const session = readJson(sessionKey(houseId), null)
+  return session?.startedAt || null
 }
 
-export function getDoneAt() {
-  try {
-    return localStorage.getItem(DONE_KEY)
-  } catch {
-    return null
-  }
+export function getDoneAt(houseId) {
+  const session = readJson(sessionKey(houseId), null)
+  return session?.endedAt || null
 }

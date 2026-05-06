@@ -111,6 +111,9 @@ export default function AdminHistory() {
                   <div className="font-display text-lg text-pink">{formatDate(s.date || s.endTime || s.startTime)}</div>
                   <div className="text-xs px-2 py-1 rounded-full bg-teal-soft text-teal">{pct}%</div>
                 </div>
+                {s.house ? (
+                  <div className="text-xs font-semibold text-violet mb-1">🏠 {s.house}</div>
+                ) : null}
                 <div className="grid grid-cols-3 gap-2 text-sm text-gray-700">
                   <div>
                     <div className="text-[10px] uppercase tracking-wider text-gray-400">Start</div>

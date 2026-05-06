@@ -1,13 +1,22 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import defaultTasks from '../data/defaultTasks.js'
+import houses from '../data/houses'
 import { notifyDone, notifyStart, resetNotificationFlags } from '../utils/notifications.js'
 
-const TASKS_KEY = 'checklist:tasks'
-const CHECKED_KEY = 'checklist:checked'
+function tasksKey(houseId) {
+  return `tasks_${houseId}`
+}
+function stateKey(houseId) {
+  return `checklist_state_${houseId}`
+}
 
-function loadTasks() {
+function lookupHouse(houseId) {
+  return houses.find((h) => h.id === houseId) || houses[0]
+}
+
+function loadTasks(houseId) {
+  const house = lookupHouse(houseId)
   try {
-    const raw = localStorage.getItem(TASKS_KEY)
+    const raw = localStorage.getItem(tasksKey(houseId))
     if (raw) {
       const parsed = JSON.parse(raw)
       if (Array.isArray(parsed) && parsed.length) return parsed
@@ -15,12 +24,12 @@ function loadTasks() {
   } catch {
     /* ignore */
   }
-  return defaultTasks
+  return house.tasks
 }
 
-function loadChecked() {
+function loadChecked(houseId) {
   try {
-    const raw = localStorage.getItem(CHECKED_KEY)
+    const raw = localStorage.getItem(stateKey(houseId))
     if (raw) {
       const parsed = JSON.parse(raw)
       if (parsed && typeof parsed === 'object') return parsed
@@ -33,7 +42,8 @@ function loadChecked() {
 
 function flattenItems(sections) {
   const items = []
-  for (const section of sections.filter(s => !s.optional)) {
+  // Optional sections (e.g. "Extra") don't count toward completion.
+  for (const section of sections.filter((s) => !s.optional)) {
     for (const sub of section.subSections || []) {
       for (const item of sub.items || []) items.push(item)
     }
@@ -41,28 +51,37 @@ function flattenItems(sections) {
   return items
 }
 
-export default function useChecklist() {
-  const [sections, setSections] = useState(loadTasks)
-  const [checkedItems, setCheckedItems] = useState(loadChecked)
+export default function useChecklist(houseId = 'home') {
+  const [sections, setSections] = useState(() => loadTasks(houseId))
+  const [checkedItems, setCheckedItems] = useState(() => loadChecked(houseId))
+  const wasComplete = useRef(false)
 
-  // Re-read tasks when admin saves new ones in another tab.
+  // House switch — reload tasks + checked state from the active house's keys.
+  useEffect(() => {
+    setSections(loadTasks(houseId))
+    setCheckedItems(loadChecked(houseId))
+    wasComplete.current = false
+  }, [houseId])
+
+  // Cross-tab / admin-edit sync.
   useEffect(() => {
     function onStorage(e) {
-      if (e.key === TASKS_KEY) setSections(loadTasks())
-      if (e.key === CHECKED_KEY) setCheckedItems(loadChecked())
+      if (!e.key) return
+      if (e.key === tasksKey(houseId)) setSections(loadTasks(houseId))
+      if (e.key === stateKey(houseId)) setCheckedItems(loadChecked(houseId))
     }
     window.addEventListener('storage', onStorage)
     return () => window.removeEventListener('storage', onStorage)
-  }, [])
+  }, [houseId])
 
-  // Persist checked state.
+  // Persist checked state under the active house's key.
   useEffect(() => {
     try {
-      localStorage.setItem(CHECKED_KEY, JSON.stringify(checkedItems))
+      localStorage.setItem(stateKey(houseId), JSON.stringify(checkedItems))
     } catch {
       /* ignore */
     }
-  }, [checkedItems])
+  }, [checkedItems, houseId])
 
   const allItems = useMemo(() => flattenItems(sections), [sections])
   const totalItems = allItems.length
@@ -72,40 +91,42 @@ export default function useChecklist() {
   )
   const isComplete = totalItems > 0 && completedItems === totalItems
 
-  // Fire notifyDone exactly once on completion edge.
-  const wasComplete = useRef(false)
+  // Fire notifyDone exactly once when this house transitions to complete.
   useEffect(() => {
     if (isComplete && !wasComplete.current) {
       wasComplete.current = true
-      notifyDone({ totalItems, completedItems })
+      const house = lookupHouse(houseId)
+      notifyDone({ houseId, houseLabel: house.label, totalItems, completedItems })
     }
     if (!isComplete) wasComplete.current = false
-  }, [isComplete, totalItems, completedItems])
+  }, [isComplete, totalItems, completedItems, houseId])
 
   const toggleItem = useCallback(
     (id) => {
       setCheckedItems((prev) => {
         const next = { ...prev, [id]: !prev[id] }
-        // Detect "first item checked" transition (no items checked before, one after).
         const prevAnyChecked = Object.values(prev).some(Boolean)
         const nextAnyChecked = Object.values(next).some(Boolean)
-        if (!prevAnyChecked && nextAnyChecked) notifyStart()
+        if (!prevAnyChecked && nextAnyChecked) {
+          const house = lookupHouse(houseId)
+          notifyStart(houseId, house.label)
+        }
         return next
       })
     },
-    []
+    [houseId]
   )
 
   const resetChecklist = useCallback(() => {
     setCheckedItems({})
     try {
-      localStorage.removeItem(CHECKED_KEY)
+      localStorage.removeItem(stateKey(houseId))
     } catch {
       /* ignore */
     }
-    resetNotificationFlags()
+    resetNotificationFlags(houseId)
     wasComplete.current = false
-  }, [])
+  }, [houseId])
 
   return {
     sections,
