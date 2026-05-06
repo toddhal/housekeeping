@@ -117,18 +117,13 @@ Create `src/hooks/useChecklist.js`:
 
 ---
 
-## TASK 4 — Notification Utility
+## TASK 4 — Notification Utility (Stubbed for Now)
 Create `src/utils/notifications.js`:
 - Export `notifyStart()` and `notifyDone()` functions
-- Each POSTs to `/.netlify/functions/sendSms` with `{ to: ADMIN_PHONE, message: '...' }`
-- Use a `hasFired` flag in localStorage so notifications only send once per session
+- For now, both functions just `console.log()` the event and save a timestamp to localStorage
+- Use a `hasFired` flag in localStorage so they only fire once per session
 - Reset flag when `resetChecklist()` is called
-
-Create `netlify/functions/sendSms.js`:
-- Accepts POST with `{ to, message }` in body
-- Uses Twilio REST API to send SMS from `TWILIO_FROM_NUMBER` to `to`
-- Returns `{ success: true }` or `{ error: '...' }`
-- Use node-fetch or built-in fetch (Node 18+)
+- Add a `// TODO: wire up SMS (Twilio) here` comment so it's easy to add later
 
 ---
 
@@ -180,17 +175,13 @@ Create `src/pages/DoneView.jsx`:
 ## TASK 7 — Music Player Component
 Create `src/components/MusicPlayer.jsx`:
 
-- Load MusicKit JS via script tag in `index.html`: `https://js-cdn.music.apple.com/musickit/v3/musickit.js`
-- On mount, initialize MusicKit with the developer token from env var
-- Show an "Authorize Apple Music" button if not yet authorized
-- Once authorized, show:
-  - Current song name + artist
-  - Play / Pause button
-  - Skip forward button
-  - A playlist or station selector (user's library playlists)
-- Sticky bar at bottom of screen, above safe area on iOS
-- Pink/teal gradient background
-- Graceful fallback: if MusicKit fails to load, show a message with a link to open Apple Music app
+- Embed a Spotify player using Spotify's iFrame Embed API
+- Default embed URL: `https://open.spotify.com/embed/playlist/37i9dQZF1DX1g0iEXLFycr` (Teen Pop Hits — can be changed in admin settings later)
+- Render the Spotify iframe in a sticky bar at the bottom of the cleaner view
+- Style the container with the pink/teal gradient background to match the app
+- The iframe should be compact height (~80px) so it doesn't take up too much screen space
+- Add a small "🎵 Music" label above the embed
+- Note: No API token or account required — Spotify embeds are public
 
 ---
 
