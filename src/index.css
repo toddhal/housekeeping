@@ -23,11 +23,24 @@ html, body, #root {
   height: 100%;
 }
 
+html, body {
+  /* Prevent accidental horizontal scroll on small viewports */
+  overflow-x: hidden;
+}
+
 body {
   font-family: var(--font-body);
   background: linear-gradient(180deg, #fdf2f8 0%, #f0fdfa 100%);
   color: #1f2937;
+  -webkit-tap-highlight-color: transparent;
   /* iOS safe area padding handled per-component when needed */
+}
+
+/* Tap-target helper. Apply to interactive elements that aren't already
+   sized to >=44px via padding. Avoid a blanket rule that would inflate
+   inline text links. */
+.tap {
+  min-height: 44px;
 }
 
 .font-display {
