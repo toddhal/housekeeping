@@ -17,16 +17,20 @@ function formatDuration(ms) {
 
 export default function DoneView() {
   const navigate = useNavigate()
-  const { resetChecklist } = useChecklist()
+  // DoneView reads the active house from localStorage (set by CleanerView)
+  // so the elapsed timer + reset target match the house that just finished.
+  const activeHouseId =
+    (typeof localStorage !== 'undefined' && localStorage.getItem('activeHouse')) || 'home'
+  const { resetChecklist } = useChecklist(activeHouseId)
   const [elapsed, setElapsed] = useState('—')
 
   useEffect(() => {
-    const start = getStartedAt()
-    const done = getDoneAt() || new Date().toISOString()
+    const start = getStartedAt(activeHouseId)
+    const done = getDoneAt(activeHouseId) || new Date().toISOString()
     if (start) {
       setElapsed(formatDuration(new Date(done).getTime() - new Date(start).getTime()))
     }
-  }, [])
+  }, [activeHouseId])
 
   // Build payment URLs from env. Defaults are placeholders so dev still works.
   const cashtagRaw = import.meta.env.VITE_CASHAPP_CASHTAG || '$yourcashtag'

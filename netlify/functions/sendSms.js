@@ -14,9 +14,20 @@ export async function handler(event) {
     return { statusCode: 400, body: 'Invalid JSON' }
   }
 
+  const appSecret = process.env.APP_SECRET
+  const callerSecret = event.headers['x-app-secret']
+  if (!appSecret || callerSecret !== appSecret) {
+    return { statusCode: 403, body: 'Forbidden' }
+  }
+
   const { to, message } = payload
   if (!to || !message) {
     return { statusCode: 400, body: 'Missing "to" or "message"' }
+  }
+
+  const allowedTo = process.env.ADMIN_PHONE
+  if (to !== allowedTo) {
+    return { statusCode: 403, body: 'Forbidden destination' }
   }
 
   const sid = process.env.TWILIO_ACCOUNT_SID

@@ -7,7 +7,7 @@ import AdminHistory from './pages/AdminHistory.jsx'
 
 function isAdminAuthed() {
   try {
-    return sessionStorage.getItem('isAdminAuth') === '1'
+    return !!sessionStorage.getItem('adminToken')
   } catch {
     return false
   }
