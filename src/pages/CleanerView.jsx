@@ -8,9 +8,13 @@ import houses from '../data/houses.js'
 
 export default function CleanerView() {
   const navigate = useNavigate()
-  const [activeHouseId, setActiveHouseId] = useState(
-    () => localStorage.getItem('activeHouse') || 'home'
-  )
+  const [activeHouseId, setActiveHouseId] = useState(() => {
+    try {
+      return localStorage.getItem('activeHouse') || 'home'
+    } catch {
+      return 'home'
+    }
+  })
   const activeHouse = houses.find((h) => h.id === activeHouseId) || houses[0]
 
   const {
